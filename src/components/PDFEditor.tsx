@@ -109,7 +109,7 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
     overlay.height = viewport.height;
 
     const ctx = base.getContext('2d')!;
-    await page.render({ canvasContext: ctx, viewport, canvas: base }).promise;
+    await page.render({ canvasContext: ctx, viewport, canvas: base } as any).promise;
   }, []);
 
   useEffect(() => {
@@ -292,7 +292,7 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
         const tmpCtx = tmpCanvas.getContext('2d')!;
 
         // Draw base PDF
-        await page.render({ canvasContext: tmpCtx, viewport, canvas: tmpCanvas }).promise;
+        await page.render({ canvasContext: tmpCtx, viewport, canvas: tmpCanvas } as any).promise;
 
         // Draw annotations on top
         for (const ann of pageAnns) {
