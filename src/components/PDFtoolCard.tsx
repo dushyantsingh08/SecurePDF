@@ -22,39 +22,117 @@ interface PDFCardProps {
 }
 
 const PDFCard: React.FC<PDFCardProps> = ({ data, index = 0, onClick }) => {
+  const [hovered, setHovered] = React.useState(false);
+
   return (
     <div
       onClick={() => onClick(data.operation)}
-      className="relative group border-none bg-white transition-all cursor-pointer flex flex-col p-10 md:p-12 crosshair overflow-hidden hover:bg-gray-50 h-full"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        background: hovered ? 'rgba(255,215,0,0.04)' : 'rgba(20,18,14,0.8)',
+        border: `1px solid ${hovered ? 'rgba(255,215,0,0.35)' : 'rgba(255,215,0,0.1)'}`,
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '40px',
+        height: '100%',
+        transition: 'all 0.25s ease',
+        boxShadow: 'none',
+        overflow: 'hidden'
+      }}
     >
-      {/* Dot grid bg on hover */}
-      <div className="absolute inset-0 dot-grid opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      {/* dot-grid on hover */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'radial-gradient(rgba(255,215,0,0.07) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        opacity: hovered ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+        pointerEvents: 'none'
+      }} />
 
-      {/* Index */}
-      <div className="relative z-10 flex items-start justify-between mb-12">
-        <span className="font-mono text-4xl md:text-5xl font-bold text-black/[0.05] group-hover:text-black/[0.1] transition-colors leading-none">
+      {/* Top row: index + tag */}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '40px' }}>
+        <span style={{
+          fontFamily: 'Space Mono, monospace',
+          fontSize: '48px',
+          fontWeight: 700,
+          color: hovered ? 'rgba(255,215,0,0.15)' : 'rgba(255,215,0,0.06)',
+          lineHeight: 1,
+          transition: 'color 0.25s ease'
+        }}>
           {String(index + 1).padStart(2, '0')}
         </span>
-        <span className="font-mono text-[11px] text-gray-800 group-hover:text-black uppercase tracking-[0.3em] transition-colors border-b-2 border-black/10 pb-2 font-bold">
+        <span style={{
+          fontFamily: 'Space Mono, monospace',
+          fontSize: '10px',
+          color: hovered ? '#FFD700' : '#888',
+          textTransform: 'uppercase',
+          letterSpacing: '0.25em',
+          fontWeight: 700,
+          borderBottom: `2px solid ${hovered ? 'rgba(255,215,0,0.5)' : 'rgba(255,215,0,0.1)'}`,
+          paddingBottom: '6px',
+          transition: 'all 0.25s ease'
+        }}>
           {data.tag}
         </span>
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col">
-        <h3 className="font-sans text-xl md:text-2xl font-bold text-black uppercase tracking-tight mb-4 transition-colors">
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <h3 style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '20px',
+          fontWeight: 700,
+          color: hovered ? '#FFD700' : '#e8e8e8',
+          textTransform: 'uppercase',
+          letterSpacing: '-0.01em',
+          marginBottom: '12px',
+          transition: 'color 0.25s ease'
+        }}>
           {data.title}
         </h3>
-        <p className="font-sans text-[15px] text-gray-500 group-hover:text-gray-700 leading-relaxed mb-10 flex-1 transition-colors font-medium">
+        <p style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          color: hovered ? '#ddd' : '#aaa',
+          lineHeight: 1.7,
+          marginBottom: '32px',
+          flex: 1,
+          transition: 'color 0.25s ease'
+        }}>
           {data.description}
         </p>
 
         {/* Action line */}
-        <div className="flex items-center justify-between mt-auto pt-8 border-t-2 border-black/[0.03] transition-colors">
-          <span className="font-mono text-[11px] text-gray-800 group-hover:text-black uppercase tracking-widest transition-colors font-bold">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: '20px',
+          borderTop: `1px solid ${hovered ? 'rgba(255,215,0,0.2)' : 'rgba(255,215,0,0.07)'}`,
+          transition: 'border-color 0.25s ease'
+        }}>
+          <span style={{
+            fontFamily: 'Space Mono, monospace',
+            fontSize: '10px',
+            color: hovered ? '#FFD700' : '#888',
+            textTransform: 'uppercase',
+            letterSpacing: '0.15em',
+            fontWeight: 700,
+            transition: 'color 0.25s ease'
+          }}>
             Execute Protocol →
           </span>
-          <div className="w-2.5 h-2.5 bg-black/[0.1] group-hover:bg-black transition-all" />
+          <div style={{
+            width: '8px',
+            height: '8px',
+            background: hovered ? '#FFD700' : 'rgba(255,215,0,0.2)',
+            transition: 'background 0.25s ease'
+          }} />
         </div>
       </div>
     </div>

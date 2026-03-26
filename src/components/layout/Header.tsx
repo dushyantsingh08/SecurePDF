@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface HeaderProps {
   onResetTool: () => void;
@@ -6,52 +6,197 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onResetTool, onNavigate }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { label: 'Protocols', view: 'protocols' },
+    { label: 'Docs', view: 'docs' },
+    { label: 'About', view: 'about' },
+  ];
+
+  const btnStyle: React.CSSProperties = {
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '11px',
+    color: '#888',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    textTransform: 'uppercase',
+    letterSpacing: '0.15em',
+    fontWeight: 700,
+    padding: '4px 0',
+  };
+
   return (
-    <header className="w-full border-b border-black/[0.08] sticky top-0 z-50 bg-white/95 backdrop-blur-md">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 h-20 flex items-center justify-between">
+    <header style={{
+      width: '100%',
+      borderBottom: '1px solid rgba(255,215,0,0.15)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50,
+      background: 'rgba(10,10,10,0.95)',
+      backdropFilter: 'blur(20px)',
+    }}>
+      <div style={{
+        maxWidth: '1440px',
+        margin: '0 auto',
+        padding: '0 20px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
         {/* Logo */}
         <div
-          className="flex items-center gap-4 cursor-pointer group"
-          onClick={() => { onResetTool(); onNavigate('home'); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flexShrink: 0 }}
+          onClick={() => { onResetTool(); onNavigate('home'); setMenuOpen(false); }}
         >
-          <div className="w-9 h-9 border border-black flex items-center justify-center transition-colors bg-white shadow-sm">
-            <span className="text-black font-mono text-sm font-bold">S</span>
+          <div style={{
+            width: '32px', height: '32px',
+            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <span style={{ color: '#000', fontFamily: 'Space Mono, monospace', fontSize: '13px', fontWeight: 700 }}>S</span>
           </div>
-          <span className="font-mono text-[13px] font-bold text-black tracking-tight uppercase hidden sm:inline border-l-2 border-black/10 pl-8 h-5 flex items-center">
+          <span style={{
+            fontFamily: 'Space Mono, monospace',
+            fontSize: '12px',
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>
             SECURE_PDF
           </span>
         </div>
 
-        {/* Nav */}
-        <nav className="hidden md:flex items-center gap-12">
-          <button
-            onClick={() => { onResetTool(); onNavigate('protocols'); }}
-            className="font-mono text-xs text-gray-600 hover:text-black uppercase tracking-widest transition-colors font-bold cursor-pointer"
-          >
-            Protocols
-          </button>
-          <button 
-            onClick={() => { onResetTool(); onNavigate('docs'); }}
-            className="font-mono text-xs text-gray-600 hover:text-black uppercase tracking-widest transition-colors font-bold cursor-pointer"
-          >
-            Docs
-          </button>
-          <button 
-            onClick={() => { onResetTool(); onNavigate('about'); }}
-            className="font-mono text-xs text-gray-600 hover:text-black uppercase tracking-widest transition-colors font-bold cursor-pointer"
-          >
-            About
-          </button>
+        {/* Desktop Nav */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '32px', '@media(max-width:640px)': { display: 'none' } } as React.CSSProperties}
+          className="hidden-mobile"
+        >
+          {navItems.map(({ label, view }) => (
+            <button
+              key={view}
+              onClick={() => { onResetTool(); onNavigate(view); }}
+              style={btnStyle}
+              onMouseEnter={e => (e.currentTarget.style.color = '#FFD700')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#888')}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
 
-        {/* CTA */}
-        <button
-          onClick={() => { onResetTool(); onNavigate('protocols'); }}
-          className="bg-black text-white font-mono text-xs uppercase tracking-widest px-8 py-3.5 transition-all cursor-pointer hover:bg-gray-800 font-bold"
-        >
-          Initialize Engine →
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Desktop CTA */}
+          <button
+            onClick={() => { onResetTool(); onNavigate('protocols'); }}
+            className="hidden-mobile"
+            style={{
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              color: '#000',
+              fontFamily: 'Space Mono, monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              padding: '10px 20px',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Initialize →
+          </button>
+
+          {/* Hamburger */}
+          <button
+            className="show-mobile"
+            onClick={() => setMenuOpen(v => !v)}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(255,215,0,0.3)',
+              color: '#FFD700',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              fontSize: '16px',
+              lineHeight: 1,
+              fontFamily: 'monospace',
+            }}
+            aria-label="Menu"
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div style={{
+          borderTop: '1px solid rgba(255,215,0,0.1)',
+          background: 'rgba(10,10,10,0.98)',
+          padding: '16px 20px 24px',
+        }}>
+          {navItems.map(({ label, view }) => (
+            <button
+              key={view}
+              onClick={() => { onResetTool(); onNavigate(view); setMenuOpen(false); }}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                fontFamily: 'Space Mono, monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#888',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.15em',
+                padding: '14px 0',
+                borderBottom: '1px solid rgba(255,215,0,0.07)',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            onClick={() => { onResetTool(); onNavigate('protocols'); setMenuOpen(false); }}
+            style={{
+              marginTop: '16px',
+              width: '100%',
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              color: '#000',
+              fontFamily: 'Space Mono, monospace',
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              padding: '14px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Initialize Engine →
+          </button>
+        </div>
+      )}
+
+      {/* Inline responsive helpers */}
+      <style>{`
+        .hidden-mobile { display: flex; }
+        .show-mobile { display: none; }
+        @media (max-width: 640px) {
+          .hidden-mobile { display: none !important; }
+          .show-mobile { display: flex !important; }
+        }
+      `}</style>
     </header>
   );
 };

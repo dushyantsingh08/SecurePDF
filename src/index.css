@@ -2,18 +2,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-black: #000000;
-  --color-white: #FFFFFF;
-  --color-gray-50: #fafafa;
-  --color-gray-100: #f5f5f5;
-  --color-gray-200: #e5e5e5;
-  --color-gray-300: #d4d4d4;
-  --color-gray-400: #a3a3a3;
-  --color-gray-500: #737373;
-  --color-gray-600: #525252;
-  --color-gray-700: #404040;
-  --color-gray-800: #262626;
-  --color-gray-900: #171717;
+  --color-gold: #FFD700;
+  --color-gold-dim: #FFA500;
+  --color-bg: #0a0a0a;
+  --color-surface: #111111;
+  --color-surface2: #1a1a1a;
+  --color-border: rgba(255,215,0,0.15);
+  --color-text: #e8e8e8;
+  --color-muted: #888888;
   --font-mono: "Space Mono", monospace;
   --font-sans: "Inter", sans-serif;
 }
@@ -21,78 +17,74 @@
 @layer base {
   * {
     border-radius: 0 !important;
+    box-sizing: border-box;
   }
 
   ::selection {
-    background: #000000;
-    color: #FFFFFF;
+    background: #FFD700;
+    color: #000000;
   }
 
   body {
-    background: #FFFFFF;
-    color: #000000;
+    background: #0a0a0a;
+    color: #e8e8e8;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,215,0,0.3);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,215,0,0.5);
   }
 }
 
 @layer utilities {
-  /* Crosshair alignment markers */
-  .crosshair::before,
-  .crosshair::after {
-    content: '+';
-    position: absolute;
-    font-family: "Space Mono", monospace;
-    font-size: 12px;
-    color: rgba(0, 0, 0, 0.1);
-    pointer-events: none;
-  }
-  .crosshair::before {
-    top: 8px;
-    left: 8px;
-  }
-  .crosshair::after {
-    bottom: 8px;
-    right: 8px;
-  }
-
-  /* Dither noise overlay - inverted opacity for white bg */
-  .dither-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
-  }
-
-  /* Dot grid pattern - subtle gray dots */
+  /* Dot grid - gold tinted */
   .dot-grid {
-    background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255,215,0,0.07) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
-  /* Scanline effect - subtle gray lines */
+  /* Scanlines */
   .scanlines {
     background-image: repeating-linear-gradient(
       0deg,
       transparent,
       transparent 2px,
-      rgba(0, 0, 0, 0.02) 2px,
-      rgba(0, 0, 0, 0.02) 4px
+      rgba(255,215,0,0.015) 2px,
+      rgba(255,215,0,0.015) 4px
     );
   }
 
-  /* Interaction highlights */
-  .stat-hover:hover {
-    background-color: rgba(0, 0, 0, 0.02);
-    transform: translateX(4px);
-    transition: all 0.3s ease;
+  /* Subtle noise overlay */
+  .dither-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
   }
 
-  /* Glow border on hover - darker transition for white bg */
-  .glow-border {
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease;
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Gold glow on hover */
+  .gold-hover:hover {
+    box-shadow: 0 0 0 1px rgba(255,215,0,0.4);
   }
-  .glow-border:hover {
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+
+  /* Gold gradient text */
+  .gold-text {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }

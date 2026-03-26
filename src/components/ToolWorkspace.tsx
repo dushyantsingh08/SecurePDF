@@ -15,6 +15,7 @@ import {
   reorderPages,
   convertToDocx,
   extractText,
+  encryptPdf,
 } from '../utils/utils';
 
 interface ToolWorkspaceProps {
@@ -22,7 +23,6 @@ interface ToolWorkspaceProps {
   onBack: () => void;
 }
 
-// Parse a string like "1-5, 8, 11-15" → [[1,5],[8,8],[11,15]]
 function parseRanges(input: string): [number, number][] {
   return input
     .split(',')
@@ -34,7 +34,6 @@ function parseRanges(input: string): [number, number][] {
     }) as [number, number][];
 }
 
-// Parse comma-separated page numbers with ranges → flat number[]
 function parsePageNumbers(input: string): number[] {
   const pages: number[] = [];
   parseRanges(input).forEach(([s, e]) => {
@@ -42,6 +41,74 @@ function parsePageNumbers(input: string): number[] {
   });
   return [...new Set(pages)];
 }
+
+const S = {
+  section: {
+    width: '100%',
+    minHeight: 'calc(100vh - 72px)',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1520 50%, #0f0f0f 100%)',
+    color: '#e8e8e8',
+    fontFamily: 'Inter, sans-serif',
+  },
+  topBar: {
+    borderBottom: '1px solid rgba(255,215,0,0.15)',
+    padding: '18px 40px',
+    background: 'rgba(0,0,0,0.5)',
+    backdropFilter: 'blur(20px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backBtn: {
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '11px',
+    color: '#FFD700',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.2em',
+    fontWeight: 700,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '12px',
+    transition: 'opacity 0.2s ease',
+  },
+  inner: {
+    flex: 1,
+    maxWidth: '1100px',
+    margin: '0 auto',
+    width: '100%',
+    padding: '64px 40px',
+  },
+  panel: {
+    border: '1px solid rgba(255,215,0,0.15)',
+    background: 'rgba(0,0,0,0.3)',
+    backdropFilter: 'blur(10px)',
+  },
+  panelHeader: {
+    borderBottom: '1px solid rgba(255,215,0,0.1)',
+    padding: '16px 28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    background: 'rgba(0,0,0,0.3)',
+  },
+  panelLabel: {
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '10px',
+    color: '#FFD700',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.2em',
+    fontWeight: 700,
+    opacity: 0.8,
+  },
+  panelBody: {
+    padding: '36px',
+  },
+};
 
 const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
   const [files, setFiles] = useState<File[]>([]);
@@ -56,33 +123,28 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
   const [status, setStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // ---- Edit PDF: show canvas editor once a file is loaded ----
+  // --- Edit PDF ---
   if (toolData.operation === 'edit') {
     if (files.length > 0) {
       return <PDFEditor file={files[0]} onDiscard={() => setFiles([])} />;
     }
     return (
-      <section className="w-full min-h-[calc(100vh-64px)] flex flex-col bg-white">
-        <div className="border-b border-black/[0.08] py-5 bg-gray-50/50">
-          <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 flex items-center">
-            <button onClick={onBack}
-              className="group font-mono text-xs text-gray-700 hover:text-black uppercase tracking-[0.2em] transition-colors cursor-pointer inline-flex items-center gap-4 font-bold"
-            >
-              <span className="inline-block transition-transform group-hover:-translate-x-1">←</span>
-              BACK TO PROTOCOLS
-            </button>
-          </div>
+      <section style={S.section}>
+        <div style={S.topBar}>
+          <button style={S.backBtn} onClick={onBack} onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+            ← BACK TO PROTOCOLS
+          </button>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="max-w-2xl w-full px-6">
-            <div className="mb-12 text-center">
-              <span className="font-mono text-[11px] text-gray-400 uppercase tracking-[0.4em] mb-4 block font-bold">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+          <div style={{ maxWidth: '640px', width: '100%' }}>
+            <div style={{ marginBottom: '48px', textAlign: 'center' }}>
+              <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#FFD700', textTransform: 'uppercase', letterSpacing: '0.4em', display: 'block', marginBottom: '16px', fontWeight: 700, opacity: 0.7 }}>
                 Canvas Editor // SELECT PAYLOAD
               </span>
-              <h1 className="font-sans text-4xl md:text-6xl font-bold text-black tracking-tighter mb-6">
+              <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 800, background: 'linear-gradient(135deg,#FFD700,#FFA500)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', letterSpacing: '-0.02em', marginBottom: '16px' }}>
                 Edit PDF
               </h1>
-              <p className="font-sans text-base text-gray-600 font-medium">
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: '#aaa', lineHeight: 1.7 }}>
                 Select a PDF to open the visual canvas editor with drawing, highlighting, and text tools.
               </p>
             </div>
@@ -95,11 +157,9 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
 
   const handleExecute = async () => {
     if (files.length === 0) return;
-
     setIsProcessing(true);
     setStatus('processing');
     setErrorMsg('');
-
     try {
       let result: Uint8Array | undefined;
       let filename = `${toolData.title.toUpperCase().replace(/\s/g, '_')}_${Date.now()}`;
@@ -110,12 +170,10 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           result = await mergePdfs(files);
           filename += '.pdf';
           break;
-
         case 'compress':
-          result = await compressPdf(files[0]);
+          result = await compressPdf(files[0], config.compressLevel);
           filename += '.pdf';
           break;
-
         case 'rotate': {
           const pageRange = config.rotatePageMode === 'all'
             ? 'all'
@@ -124,19 +182,16 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           filename += '.pdf';
           break;
         }
-
         case 'split': {
           if (!config.splitRanges?.trim()) throw new Error('Please enter page ranges to split.');
           const ranges = parseRanges(config.splitRanges);
           const splitResult = await splitPdf(files[0], ranges);
-          // Download each range as a separate file
           splitResult.forEach((bytes, i) => {
             downloadBlob(bytes, `SPLIT_${String(i + 1).padStart(2, '0')}_${Date.now()}.pdf`);
           });
           setStatus('done');
           return;
         }
-
         case 'delete': {
           if (!config.deletePages?.trim()) throw new Error('Please enter pages to delete.');
           const nums = parsePageNumbers(config.deletePages);
@@ -144,7 +199,6 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           filename += '.pdf';
           break;
         }
-
         case 'watermark': {
           const text = config.watermarkText?.trim() || 'CONFIDENTIAL';
           const opacity = config.watermarkOpacity ?? 0.12;
@@ -152,12 +206,10 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           filename += '.pdf';
           break;
         }
-
         case 'flatten':
           result = await flattenPdf(files[0]);
           filename += '.pdf';
           break;
-
         case 'reorder': {
           if (!config.reorderInput?.trim()) throw new Error('Please enter the new page order.');
           const order = config.reorderInput.split(',').map(n => parseInt(n.trim()));
@@ -165,13 +217,11 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           filename += '.pdf';
           break;
         }
-
         case 'pdf-to-docx':
           result = await convertToDocx(files[0]);
           filename += '.docx';
           contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
           break;
-
         case 'pdf-to-txt': {
           const text = await extractText(files[0]);
           result = new TextEncoder().encode(text);
@@ -179,14 +229,12 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
           contentType = 'text/plain';
           break;
         }
-
         case 'protect': {
-          if (!config.password?.trim()) throw new Error('Please enter a password to encrypt with.');
-          result = await compressPdf(files[0]); // placeholder until real encryption
+          if (!config.password?.trim()) throw new Error('Please enter a password.');
+          result = await encryptPdf(files[0], config.password.trim());
           filename += '.pdf';
           break;
         }
-
         default:
           throw new Error(`${toolData.operation} protocol is being integrated.`);
       }
@@ -205,131 +253,127 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ toolData, onBack }) => {
   };
 
   return (
-    <section className="w-full min-h-[calc(100vh-64px)] flex flex-col bg-white">
+    <section style={S.section}>
       {/* Top bar */}
-      <div className="border-b border-black/[0.08] py-5 bg-gray-50/50">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="group font-mono text-xs text-gray-700 hover:text-black uppercase tracking-[0.2em] transition-colors cursor-pointer inline-flex items-center gap-4 font-bold"
-          >
-            <span className="inline-block transition-transform group-hover:-translate-x-1">←</span>
-            BACK TO PROTOCOLS
-          </button>
-          <div className="flex items-center gap-6">
-            <span className="font-mono text-[11px] text-gray-500 uppercase tracking-[0.4em] font-bold hidden sm:inline">
-              PROTOCOL_INTAKE: {toolData.tag}
-            </span>
-            <div className="flex gap-2">
-              <div className={`w-2 h-2 ${status === 'processing' ? 'bg-black animate-pulse' : 'bg-black/10'}`} />
-              <div className={`w-2 h-2 ${status === 'done' ? 'bg-green-500' : 'bg-black/10'}`} />
-            </div>
+      <div style={S.topBar}>
+        <button style={S.backBtn} onClick={onBack} onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')} onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+          ← BACK TO PROTOCOLS
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700 }}>
+            PROTOCOL_INTAKE: {toolData.tag}
+          </span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ width: '8px', height: '8px', background: status === 'processing' ? '#FFD700' : 'rgba(255,215,0,0.15)', transition: 'background 0.3s' }} />
+            <div style={{ width: '8px', height: '8px', background: status === 'done' ? '#22c55e' : 'rgba(255,215,0,0.15)', transition: 'background 0.3s' }} />
           </div>
         </div>
       </div>
 
       {/* Main workspace */}
-      <div className="flex-1 max-w-[1440px] mx-auto w-full px-6 md:px-12 lg:px-20 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto">
-          {/* Title block */}
-          <div className="mb-14 border-l-4 border-black/10 pl-10">
-            <span className="font-mono text-[11px] text-gray-400 uppercase tracking-[0.4em] mb-4 block font-bold">
-              Execution Interface // {toolData.operation}
-            </span>
-            <h1 className="font-sans text-4xl md:text-6xl font-bold text-black tracking-tighter mb-8">
-              {toolData.title}
-            </h1>
-            <p className="font-sans text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl font-medium">
-              {toolData.description}
-            </p>
-          </div>
+      <div style={S.inner}>
+        {/* Title block */}
+        <div style={{ marginBottom: '48px', borderLeft: '2px solid rgba(255,215,0,0.4)', paddingLeft: '28px' }}>
+          <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#FFD700', textTransform: 'uppercase', letterSpacing: '0.4em', display: 'block', marginBottom: '12px', fontWeight: 700, opacity: 0.7 }}>
+            Execution Interface // {toolData.operation}
+          </span>
+          <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '16px', background: 'linear-gradient(135deg,#FFD700,#FFA500)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            {toolData.title}
+          </h1>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: '#aaa', lineHeight: 1.7, maxWidth: '560px' }}>
+            {toolData.description}
+          </p>
+        </div>
 
-          {/* Upload area */}
-          <div className="border-2 border-black/[0.05] bg-white">
-            <div className="border-b-2 border-black/[0.05] px-8 py-4 flex items-center justify-between bg-gray-50/30">
-              <span className="font-mono text-[11px] text-gray-500 uppercase tracking-[0.3em] font-bold">
-                Payload Intake Zone
-              </span>
-              <span className="font-mono text-[11px] text-gray-300 font-bold uppercase">
-                {files.length} Object{files.length !== 1 ? 's' : ''} Staged
-              </span>
+        {/* Upload panel */}
+        <div style={S.panel}>
+          <div style={S.panelHeader}>
+            <span style={S.panelLabel}>Payload Intake Zone</span>
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#999', fontWeight: 700, textTransform: 'uppercase' }}>
+              {files.length} Object{files.length !== 1 ? 's' : ''} Staged
+            </span>
+          </div>
+          <div style={S.panelBody}>
+            <DragAndDrop
+              files={files}
+              onFilesSelected={setFiles}
+              acceptedFileTypes=".pdf"
+              maxFiles={toolData.operation === 'merge' ? 10 : 1}
+            />
+          </div>
+        </div>
+
+        {/* Configuration panel */}
+        {files.length > 0 && (
+          <div style={{ ...S.panel, marginTop: '24px' }}>
+            <div style={S.panelHeader}>
+              <span style={S.panelLabel}>Operation Configuration</span>
+              <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#999', fontWeight: 700, textTransform: 'uppercase' }}>{toolData.operation}</span>
             </div>
-            <div className="p-8 md:p-12">
-              <DragAndDrop
-                files={files}
-                onFilesSelected={setFiles}
-                acceptedFileTypes=".pdf"
-                maxFiles={toolData.operation === 'merge' ? 10 : 1}
+            <div style={S.panelBody}>
+              <ToolConfig
+                operation={toolData.operation}
+                values={config}
+                onChange={setConfig}
+                fileCount={files.length}
+                originalSize={files[0]?.size || 0}
               />
             </div>
           </div>
+        )}
 
-          {/* Configuration Panel */}
-          {files.length > 0 && (
-            <div className="mt-12 border-2 border-black/[0.05]">
-              <div className="border-b-2 border-black/[0.05] px-8 py-4 flex items-center justify-between bg-gray-50/30">
-                <span className="font-mono text-[11px] text-black font-bold uppercase tracking-widest">
-                  Operation Configuration
-                </span>
-                <span className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                  {toolData.operation}
-                </span>
-              </div>
-              <div className="p-8 md:p-10">
-                <ToolConfig
-                  operation={toolData.operation}
-                  values={config}
-                  onChange={setConfig}
-                  fileCount={files.length}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Action Bar */}
-          {files.length > 0 && (
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-8 border-t-2 border-black/[0.05] pt-12">
-              <div className="flex flex-col gap-2">
-                <span className="font-mono text-[11px] text-black font-bold uppercase tracking-widest">
-                  System Readiness
-                </span>
-                <span className="font-mono text-xs text-gray-400 font-bold uppercase">
-                  {isProcessing ? 'Status: PROCESSING_BYTES...' : 'Status: AWAITING_COMMAND'}
-                </span>
-              </div>
-
-              <button
-                onClick={handleExecute}
-                disabled={isProcessing}
-                className={`w-full sm:w-auto px-16 py-5 font-mono text-sm font-bold uppercase tracking-[0.3em] transition-all
-                  ${isProcessing
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-black text-white hover:bg-gray-800 shadow-2xl cursor-pointer hover:-translate-y-1 active:translate-y-0'
-                  }
-                `}
-              >
-                {isProcessing ? 'Executing...' : 'Execute Protocol →'}
-              </button>
-            </div>
-          )}
-
-          {/* Status Messages */}
-          {status === 'done' && (
-            <div className="mt-8 p-6 border-2 border-green-500/20 bg-green-50/30 flex items-center gap-4">
-              <span className="font-mono text-xs text-green-700 font-bold uppercase tracking-widest">
-                ✓ Operation Successful // Payload Dispatched to Download
+        {/* Action bar */}
+        {files.length > 0 && (
+          <div style={{ marginTop: '40px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '24px', borderTop: '1px solid rgba(255,215,0,0.12)', paddingTop: '40px' }}>
+            <div>
+              <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#FFD700', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, display: 'block', marginBottom: '6px', opacity: 0.8 }}>
+                System Readiness
+              </span>
+              <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>
+                {isProcessing ? 'Status: PROCESSING_BYTES...' : 'Status: AWAITING_COMMAND'}
               </span>
             </div>
-          )}
 
-          {status === 'error' && (
-            <div className="mt-8 p-6 border-2 border-red-500/20 bg-red-50/30 flex items-center gap-4">
-              <span className="font-mono text-xs text-red-700 font-bold uppercase tracking-widest">
-                ✗ Failure: {errorMsg || 'Operation Aborted'}
-              </span>
-            </div>
-          )}
-        </div>
+            <button
+              onClick={handleExecute}
+              disabled={isProcessing}
+              style={{
+                padding: '18px 56px',
+                fontFamily: 'Space Mono, monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                border: 'none',
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                background: isProcessing ? 'rgba(255,215,0,0.2)' : 'linear-gradient(135deg,#FFD700 0%,#FFA500 100%)',
+                color: isProcessing ? '#888' : '#000',
+                transition: 'all 0.3s ease',
+                opacity: isProcessing ? 0.5 : 1
+              }}
+              onMouseEnter={e => { if (!isProcessing) { e.currentTarget.style.transform = 'translateY(-2px)'; }}}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              {isProcessing ? 'Executing...' : 'Execute Protocol →'}
+            </button>
+          </div>
+        )}
+
+        {/* Status messages */}
+        {status === 'done' && (
+          <div style={{ marginTop: '24px', padding: '20px 28px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '11px', color: '#22c55e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              ✓ Operation Successful // Payload Dispatched to Download
+            </span>
+          </div>
+        )}
+        {status === 'error' && (
+          <div style={{ marginTop: '24px', padding: '20px 28px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '11px', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              ✗ Failure: {errorMsg || 'Operation Aborted'}
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );

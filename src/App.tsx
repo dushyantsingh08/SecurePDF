@@ -8,6 +8,14 @@ import About from './pages/About';
 import Docs from './pages/Docs';
 import { pdfTools } from './data/pdfTools';
 
+const categories = [
+  { id: 'popular', label: 'Recommended' },
+  { id: 'editing', label: 'Editing' },
+  { id: 'security', label: 'Security' },
+  { id: 'optimization', label: 'Optimization' },
+  { id: 'conversion', label: 'Conversion' },
+];
+
 function App() {
   const [selectedTool, setSelectedTool] = useState<PDFActionType | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('popular');
@@ -29,16 +37,8 @@ function App() {
     document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const categories = [
-    { id: 'popular', label: 'Recommended' },
-    { id: 'editing', label: 'Editing' },
-    { id: 'security', label: 'Security' },
-    { id: 'optimization', label: 'Optimization' },
-    { id: 'conversion', label: 'Conversion' },
-  ];
-
   return (
-    <div className="min-h-screen bg-white text-black font-sans flex flex-col">
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#e8e8e8', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column' }}>
       <Header
         onResetTool={() => setSelectedTool(null)}
         onNavigate={(view: string) => {
@@ -62,11 +62,29 @@ function App() {
           {currentView === 'home' && (
             <>
               <Hero onExploreTools={scrollToTools} />
-              <section className="w-full text-center py-16 md:py-20 px-6 border-t border-black/[0.08] bg-gray-50/10">
-                <h2 className="font-sans text-4xl md:text-5xl font-bold text-black tracking-tight mb-4">
+
+              {/* Intro blurb */}
+              <section style={{
+                width: '100%',
+                textAlign: 'center',
+                padding: '80px 40px',
+                borderTop: '1px solid rgba(255,215,0,0.1)',
+                background: 'rgba(255,215,0,0.02)'
+              }}>
+                <h2 style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 'clamp(28px, 4vw, 48px)',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  marginBottom: '16px',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
                   Powerful PDF Tools
                 </h2>
-                <p className="font-sans text-lg md:text-xl text-gray-600 font-medium max-w-2xl mx-auto">
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#aaa', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
                   Everything runs locally. Your files never leave your device.
                 </p>
               </section>
@@ -74,47 +92,92 @@ function App() {
           )}
 
           {/* Category Filter */}
-          <section id="tools" className="scroll-mt-16 w-full border-t border-black/[0.08] bg-gray-50/20">
-            <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-10 flex border-b border-black/[0.05] overflow-x-auto no-scrollbar gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-8 py-3 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer whitespace-nowrap font-bold
-                     ${activeCategory === cat.id
-                      ? 'bg-black text-white'
-                      : 'text-gray-400 hover:text-black hover:bg-black/5'
-                    }
-                   `}
-                >
-                  {cat.label}
-                </button>
-              ))}
+          <section id="tools" style={{ width: '100%', borderTop: '1px solid rgba(255,215,0,0.1)', background: 'rgba(0,0,0,0.3)', scrollMarginTop: '72px' }}>
+            <div style={{
+              maxWidth: '1440px',
+              margin: '0 auto',
+              padding: '0 40px',
+              display: 'flex',
+              borderBottom: '1px solid rgba(255,215,0,0.08)',
+              overflowX: 'auto',
+              gap: '4px'
+            }}
+              className="no-scrollbar"
+            >
+              {categories.map((cat) => {
+                const active = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      padding: '18px 28px',
+                      fontFamily: 'Space Mono, monospace',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.2em',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: active ? 'rgba(255,215,0,0.12)' : 'transparent',
+                      color: active ? '#FFD700' : '#888',
+                      borderBottom: `2px solid ${active ? '#FFD700' : 'transparent'}`,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#aaa'; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#888'; }}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
             </div>
           </section>
 
           {/* Tools Grid */}
-          <section className="w-full">
-            <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24">
+          <section style={{ width: '100%', flex: 1 }}>
+            <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '60px 40px' }}>
               {/* Section header */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-                <div className="flex-1">
-                  <span className="font-mono text-[11px] text-gray-600 uppercase tracking-[0.4em] mb-4 block font-bold">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '24px', marginBottom: '48px' }}>
+                <div>
+                  <span style={{
+                    fontFamily: 'Space Mono, monospace',
+                    fontSize: '10px',
+                    color: '#FFD700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.4em',
+                    display: 'block',
+                    marginBottom: '12px',
+                    fontWeight: 700,
+                    opacity: 0.7
+                  }}>
                     Protocol Intake // {activeCategory.toUpperCase()}
                   </span>
-                  <h2 className="font-sans text-3xl md:text-5xl font-bold text-black tracking-tight">
+                  <h2 style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: 'clamp(24px, 3vw, 40px)',
+                    fontWeight: 800,
+                    color: '#e8e8e8',
+                    letterSpacing: '-0.02em',
+                    margin: 0
+                  }}>
                     {activeCategory === 'popular' ? 'Primary Operations' : `${categories.find(c => c.id === activeCategory)?.label} Suite`}
                   </h2>
                 </div>
-                <div className="flex-1 md:text-right">
-                  <p className="font-sans text-[15px] text-gray-500 max-w-sm ml-auto leading-relaxed font-medium">
-                    All transformations execute in your secure environment. No payload leaves your local system architecture.
-                  </p>
-                </div>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#888', maxWidth: '360px', lineHeight: 1.7 }}>
+                  All transformations execute in your secure environment. No payload leaves your local system.
+                </p>
               </div>
 
               {/* Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-black/[0.1] border border-black/[0.1]">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '1px',
+                background: 'rgba(255,215,0,0.08)',
+                border: '1px solid rgba(255,215,0,0.08)'
+              }}>
                 {filteredTools.map((tool, i) => (
                   <PDFCard
                     key={tool.id}
@@ -127,23 +190,37 @@ function App() {
             </div>
           </section>
 
-          {/* Infrastructure Stats block */}
-          <section className="w-full border-y border-black/[0.08] bg-gray-50/30">
-            <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-24">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
+          {/* Stats block */}
+          <section style={{ width: '100%', borderTop: '1px solid rgba(255,215,0,0.1)', borderBottom: '1px solid rgba(255,215,0,0.1)', background: 'rgba(255,215,0,0.02)' }}>
+            <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '80px 40px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px' }}>
                 {[
                   { label: 'System_Latency', value: '0.00ms', desc: 'Local compute active' },
                   { label: 'Processing_Mode', value: 'WASM', desc: 'Secure client-side' },
                   { label: 'Network_Exposures', value: '00.0', desc: 'Isolated sandbox' },
                   { label: 'Deployment_Nodes', value: 'V.2.0.4', desc: 'Origin protocol' },
                 ].map((stat, i) => (
-                  <div key={i} className="flex flex-col gap-5">
-                    <span className="font-mono text-[11px] text-gray-500 uppercase tracking-widest font-bold border-l-2 border-black/10 pl-6 h-4 flex items-center">
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <span style={{
+                      fontFamily: 'Space Mono, monospace',
+                      fontSize: '10px',
+                      color: '#FFD700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.2em',
+                      fontWeight: 700,
+                      borderLeft: '2px solid rgba(255,215,0,0.3)',
+                      paddingLeft: '16px',
+                      opacity: 0.7
+                    }}>
                       {stat.label}
                     </span>
                     <div>
-                      <div className="font-sans text-3xl md:text-4xl font-bold text-black tracking-tighter mb-2">{stat.value}</div>
-                      <div className="font-mono text-[11px] text-gray-400 font-bold uppercase tracking-widest">{stat.desc}</div>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '36px', fontWeight: 800, color: '#e8e8e8', letterSpacing: '-0.02em', marginBottom: '8px' }}>
+                        {stat.value}
+                      </div>
+                      <div style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>
+                        {stat.desc}
+                      </div>
                     </div>
                   </div>
                 ))}

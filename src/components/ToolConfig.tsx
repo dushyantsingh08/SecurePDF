@@ -1,5 +1,6 @@
 import React from 'react';
 import { type PDFActionType } from '../components/PDFtoolCard';
+import { formatBytes } from '../utils/utils';
 
 // ---- Shared config type ----
 export interface ToolConfigValues {
@@ -30,10 +31,21 @@ interface ToolConfigProps {
   values: ToolConfigValues;
   onChange: (values: ToolConfigValues) => void;
   fileCount?: number;
+  originalSize?: number;
 }
 
 const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <label className="font-mono text-[11px] text-gray-600 font-bold uppercase tracking-widest block mb-3">
+  <label style={{
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '10px',
+    color: '#FFD700',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.2em',
+    display: 'block',
+    marginBottom: '12px',
+    opacity: 0.8
+  }}>
     {children}
   </label>
 );
@@ -41,32 +53,62 @@ const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
   <input
     {...props}
-    className="w-full bg-white border-2 border-black/[0.08] px-5 py-3.5 font-mono text-sm text-black focus:border-black outline-none transition-all placeholder:text-gray-300"
+    style={{
+      width: '100%',
+      background: 'rgba(255,215,0,0.03)',
+      border: '1px solid rgba(255,215,0,0.15)',
+      padding: '14px 20px',
+      fontFamily: 'Space Mono, monospace',
+      fontSize: '13px',
+      color: '#e8e8e8',
+      outline: 'none',
+      transition: 'all 0.2s ease',
+      ...props.style
+    }}
+    onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,215,0,0.5)'}
+    onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,215,0,0.15)'}
   />
 );
 
 
-const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fileCount = 0 }) => {
+const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fileCount = 0, originalSize = 0 }) => {
   const set = (patch: Partial<ToolConfigValues>) => onChange({ ...values, ...patch });
 
   if (fileCount === 0) return null;
+
+  const getEstimatedSize = (level: string) => {
+    if (!originalSize) return 'Calculating...';
+    let ratio = 0.7;
+    if (level === 'extreme') ratio = 0.4;
+    if (level === 'high_fidelity') ratio = 0.9;
+    return formatBytes(originalSize * ratio);
+  };
 
   switch (operation) {
     // ---- ROTATE ----
     case 'rotate':
       return (
-        <div className="flex flex-col gap-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div>
             <Label>Rotation Angle</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {([90, 180, 270] as const).map(deg => (
                 <button
                   key={deg}
                   type="button"
                   onClick={() => set({ rotateDegrees: deg })}
-                  className={`py-4 border-2 font-mono text-sm font-bold uppercase tracking-widest transition-all cursor-pointer
-                    ${values.rotateDegrees === deg ? 'border-black bg-black text-white' : 'border-black/[0.1] text-gray-600 hover:border-black/40'}
-                  `}
+                  style={{
+                    padding: '14px 0',
+                    border: `1px solid ${values.rotateDegrees === deg ? '#FFD700' : 'rgba(255,215,0,0.1)'}`,
+                    fontFamily: 'Space Mono, monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    background: values.rotateDegrees === deg ? '#FFD700' : 'rgba(0,0,0,0.2)',
+                    color: values.rotateDegrees === deg ? '#000' : '#888',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
                   {deg}°
                 </button>
@@ -75,22 +117,31 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
           </div>
           <div>
             <Label>Page Selection</Label>
-            <div className="flex gap-3 mb-4">
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
               {(['all', 'range'] as const).map(mode => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => set({ rotatePageMode: mode })}
-                  className={`px-6 py-3 border-2 font-mono text-xs font-bold uppercase tracking-widest transition-all cursor-pointer
-                    ${values.rotatePageMode === mode ? 'border-black bg-black text-white' : 'border-black/[0.1] text-gray-600 hover:border-black/40'}
-                  `}
+                  style={{
+                    padding: '10px 24px',
+                    border: `1px solid ${values.rotatePageMode === mode ? '#FFD700' : 'rgba(255,215,0,0.1)'}`,
+                    fontFamily: 'Space Mono, monospace',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    background: values.rotatePageMode === mode ? '#FFD700' : 'rgba(0,0,0,0.2)',
+                    color: values.rotatePageMode === mode ? '#000' : '#888',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
                   {mode === 'all' ? 'All Pages' : 'Custom Range'}
                 </button>
               ))}
             </div>
             {values.rotatePageMode === 'range' && (
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <Label>Start Page</Label>
                   <Input
@@ -116,7 +167,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- SPLIT ----
     case 'split':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>Page Ranges</Label>
             <Input
@@ -125,7 +176,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
               value={values.splitRanges ?? ''}
               onChange={e => set({ splitRanges: e.target.value })}
             />
-            <p className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-3">
+            <p style={{ fontFamily: 'Space Mono, monospace', fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '12px', fontWeight: 700 }}>
               Separate ranges with commas. Each range produces an output file.
             </p>
           </div>
@@ -135,7 +186,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- DELETE PAGES ----
     case 'delete':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>Pages to Remove</Label>
             <Input
@@ -144,7 +195,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
               value={values.deletePages ?? ''}
               onChange={e => set({ deletePages: e.target.value })}
             />
-            <p className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-3">
+            <p style={{ fontFamily: 'Space Mono, monospace', fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '12px', fontWeight: 700 }}>
               Separate individual pages or ranges with commas.
             </p>
           </div>
@@ -154,7 +205,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- WATERMARK ----
     case 'watermark':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>Watermark Text</Label>
             <Input
@@ -170,7 +221,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
               type="range" min={5} max={60} step={5}
               value={(values.watermarkOpacity ?? 0.12) * 100}
               onChange={e => set({ watermarkOpacity: parseInt(e.target.value) / 100 })}
-              className="w-full accent-black cursor-pointer"
+              style={{ width: '100%', accentColor: '#FFD700', cursor: 'pointer', background: 'rgba(255,215,0,0.1)', height: '4px', borderRadius: '0' }}
             />
           </div>
         </div>
@@ -179,7 +230,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- PROTECT / ENCRYPT ----
     case 'protect':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>User Password</Label>
             <Input
@@ -188,8 +239,8 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
               value={values.password ?? ''}
               onChange={e => set({ password: e.target.value })}
             />
-            <p className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-3">
-              This password will be required to open the document.
+            <p style={{ fontFamily: 'Space Mono, monospace', fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '12px', fontWeight: 700 }}>
+              This password will be required to open the document. [System: Local Encryption Active]
             </p>
           </div>
         </div>
@@ -198,25 +249,38 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- COMPRESS ----
     case 'compress':
       return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
           {([
-            { id: 'extreme', label: 'Extreme', desc: 'Max reduction, reduced quality', bar: 'w-full' },
-            { id: 'recommended', label: 'Recommended', desc: 'Balanced quality & size', bar: 'w-2/3' },
-            { id: 'high_fidelity', label: 'High Fidelity', desc: 'Near-lossless, minimal reduction', bar: 'w-1/3' },
+            { id: 'extreme', label: 'Extreme', desc: 'Max reduction, reduced quality', bar: '100%' },
+            { id: 'recommended', label: 'Recommended', desc: 'Balanced quality & size', bar: '66%' },
+            { id: 'high_fidelity', label: 'High Fidelity', desc: 'Near-lossless, minimal reduction', bar: '33%' },
           ] as const).map(opt => (
             <button
               key={opt.id}
               type="button"
               onClick={() => set({ compressLevel: opt.id })}
-              className={`border-2 p-5 text-left transition-all cursor-pointer flex flex-col gap-3
-                ${values.compressLevel === opt.id ? 'border-black bg-black/5' : 'border-black/[0.08] bg-white hover:border-black/30'}
-              `}
+              style={{
+                border: `1px solid ${values.compressLevel === opt.id ? '#FFD700' : 'rgba(255,215,0,0.1)'}`,
+                padding: '24px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                background: values.compressLevel === opt.id ? 'rgba(255,215,0,0.08)' : 'rgba(0,0,0,0.2)',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-black">{opt.label}</span>
-              <div className="h-1 w-full bg-black/[0.05] overflow-hidden">
-                <div className={`h-full bg-black ${opt.bar}`} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: values.compressLevel === opt.id ? '#FFD700' : '#aaa' }}>{opt.label}</span>
+                {values.compressLevel === opt.id && originalSize > 0 && (
+                  <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#22c55e', fontWeight: 700 }}>~{getEstimatedSize(opt.id)}</span>
+                )}
               </div>
-              <span className="font-mono text-[10px] text-gray-400 font-bold uppercase">{opt.desc}</span>
+              <div style={{ height: '2px', width: '100%', background: 'rgba(255,215,0,0.1)' }}>
+                <div style={{ height: '100%', background: '#FFD700', width: opt.bar, opacity: values.compressLevel === opt.id ? 1 : 0.3 }} />
+              </div>
+              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#888', fontWeight: 500 }}>{opt.desc}</span>
             </button>
           ))}
         </div>
@@ -225,7 +289,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     // ---- REORDER ----
     case 'reorder':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>New Page Order</Label>
             <Input
@@ -234,7 +298,7 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
               value={values.reorderInput ?? ''}
               onChange={e => set({ reorderInput: e.target.value })}
             />
-            <p className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-3">
+            <p style={{ fontFamily: 'Space Mono, monospace', fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '12px', fontWeight: 700 }}>
               Enter page numbers in the desired output order.
             </p>
           </div>
@@ -245,38 +309,45 @@ const ToolConfig: React.FC<ToolConfigProps> = ({ operation, values, onChange, fi
     case 'pdf-to-jpg':
     case 'pdf-to-png':
       return (
-        <div className="flex flex-col gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <Label>Render DPI: {values.imageDpi ?? 150}</Label>
-            <div className="grid grid-cols-3 gap-3 mt-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '8px' }}>
               {([72, 150, 300] as const).map(dpi => (
                 <button
                   key={dpi}
                   type="button"
                   onClick={() => set({ imageDpi: dpi })}
-                  className={`py-4 border-2 font-mono text-sm font-bold tracking-widest transition-all cursor-pointer
-                    ${values.imageDpi === dpi ? 'border-black bg-black text-white' : 'border-black/[0.1] text-gray-600 hover:border-black/40'}
-                  `}
+                  style={{
+                    padding: '14px 0',
+                    border: `1px solid ${values.imageDpi === dpi ? '#FFD700' : 'rgba(255,215,0,0.1)'}`,
+                    fontFamily: 'Space Mono, monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: values.imageDpi === dpi ? '#FFD700' : 'rgba(0,0,0,0.2)',
+                    color: values.imageDpi === dpi ? '#000' : '#888',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
                   {dpi} DPI
                 </button>
               ))}
             </div>
-            <p className="font-mono text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-3">
+            <p style={{ fontFamily: 'Space Mono, monospace', fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '12px', fontWeight: 700 }}>
               Higher DPI = better quality but larger file size.
             </p>
           </div>
         </div>
       );
 
-    // Operations that need no extra config
     default:
       return (
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-xs text-gray-400 font-bold uppercase">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Automated protocol active. No configuration required.
           </span>
-          <span className="font-mono text-[11px] text-green-600 font-bold">READY_TO_PROCEED</span>
+          <span style={{ fontFamily: 'Space Mono, monospace', fontSize: '10px', color: '#22c55e', fontWeight: 700, textTransform: 'uppercase' }}>READY_TO_PROCEED</span>
         </div>
       );
   }

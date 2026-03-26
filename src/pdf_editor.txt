@@ -1,16 +1,9 @@
-// @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, ZoomIn, ZoomOut, Save, Undo, Redo, Type, MousePointer, Trash2, Bold, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronRight, FileText, ArrowLeft } from 'lucide-react';
+import { Download, Upload, ZoomIn, ZoomOut, Save, Undo, Redo, Type, MousePointer, Trash2, Bold, AlignLeft, AlignCenter, AlignRight, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { loadPDFFile, exportModifiedPDF, createModifications } from './pdfUtils';
-import { downloadBlob } from '../utils/utils';
 
-interface PDFEditorProps {
-  file: File;
-  onDiscard: () => void;
-}
-
-const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
-  const [pdfFile, setPdfFile] = useState(file);
+const PDFEditorPro = () => {
+  const [pdfFile, setPdfFile] = useState(null);
   const [originalFileBuffer, setOriginalFileBuffer] = useState(null);
   const [pages, setPages] = useState([]);
   const [originalPages, setOriginalPages] = useState([]);
@@ -23,63 +16,61 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef(null);
 
-  // Handle PDF file load
-  useEffect(() => {
-    const init = async () => {
-      setIsProcessing(true);
-      try {
-        const { pages: loadedPages, originalFile } = await loadPDFFile(file);
-        setPages(loadedPages);
-        setOriginalPages(loadedPages);
-        setOriginalFileBuffer(originalFile);
-        
-        // Initialize text elements from loaded pages
-        const initialTextElements = {};
-        loadedPages.forEach((page, index) => {
-          initialTextElements[index] = page.textElements;
-        });
-        
-        setTextElements(initialTextElements);
-        
-        const newHistory = [JSON.parse(JSON.stringify(initialTextElements))];
-        setHistory(newHistory);
-        setHistoryIndex(0);
-        setCurrentPage(0);
-      } catch (error) {
-        console.error('Error loading PDF:', error);
-        alert('Failed to load PDF. Please try again.');
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-    init();
-  }, [file]);
+  // Handle PDF file upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') {
+      alert('Please upload a valid PDF file');
+      return;
+    }
+
+    setIsProcessing(true);
+    setPdfFile(file);
+    
+    try {
+      const { pages: loadedPages, originalFile } = await loadPDFFile(file);
+      setPages(loadedPages);
+      setOriginalPages(loadedPages);
+      setOriginalFileBuffer(originalFile);
+      
+      // Initialize text elements from loaded pages
+      const initialTextElements = {};
+      loadedPages.forEach((page, index) => {
+        initialTextElements[index] = page.textElements;
+      });
+      
+      setTextElements(initialTextElements);
+      addToHistory(initialTextElements);
+      setCurrentPage(0);
+    } catch (error) {
+      console.error('Error loading PDF:', error);
+      alert('Failed to load PDF. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // History management
-  const addToHistory = (newStateMap) => {
-    let newHistory = [];
-    if (historyIndex >= 0) {
-      newHistory = history.slice(0, historyIndex + 1);
-    }
-    newHistory.push(JSON.parse(JSON.stringify(newStateMap)));
+  const addToHistory = (newState) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(JSON.parse(JSON.stringify(newState)));
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
 
   const undo = () => {
     if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setTextElements(JSON.parse(JSON.stringify(history[newIndex])));
+      setHistoryIndex(historyIndex - 1);
+      setTextElements(JSON.parse(JSON.stringify(history[historyIndex - 1])));
     }
   };
 
   const redo = () => {
     if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setTextElements(JSON.parse(JSON.stringify(history[newIndex])));
+      setHistoryIndex(historyIndex + 1);
+      setTextElements(JSON.parse(JSON.stringify(history[historyIndex + 1])));
     }
   };
 
@@ -148,10 +139,18 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
     try {
       const modifications = createModifications(originalPages, textElements);
       const blob = await exportModifiedPDF(originalFileBuffer, pages, modifications);
-      downloadBlob(blob, `edited-${file.name}`);
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edited-${pdfFile.name}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      alert('PDF exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
-      alert(`Failed to export PDF: ${error.message || 'Unknown error'}`);
+      alert('Failed to export PDF. Some features may not be fully supported.');
     } finally {
       setIsProcessing(false);
     }
@@ -159,9 +158,8 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
 
   return (
     <div style={{
-      width: '100%',
-      height: '100%',
-      minHeight: 'calc(100vh - 64px)',
+      width: '100vw',
+      height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1520 50%, #0f0f0f 100%)',
@@ -207,20 +205,6 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
         boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button 
-            onClick={onDiscard}
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              color: '#FFD700', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              marginRight: '15px' 
-            }}
-          >
-            <ArrowLeft size={24} />
-          </button>
           <div style={{
             width: '40px',
             height: '40px',
@@ -243,89 +227,109 @@ const PDFEditor: React.FC<PDFEditorProps> = ({ file, onDiscard }) => {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}>
-            PDF Editor Pro - {file.name}
+            PDF Editor Pro
           </h1>
         </div>
         
         <div style={{ display: 'flex', gap: '12px' }}>
-          <ActionButton
-            icon={<Save size={18} />}
-            label="Save"
-            onClick={exportPDF}
-            disabled={isProcessing}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
           />
           <ActionButton
-            icon={<Download size={18} />}
-            label="Export"
-            onClick={exportPDF}
-            disabled={isProcessing}
+            icon={<Upload size={18} />}
+            label="Upload"
+            onClick={() => fileInputRef.current?.click()}
             primary
           />
+          {pdfFile && (
+            <>
+              <ActionButton
+                icon={<Save size={18} />}
+                label="Save"
+                onClick={exportPDF}
+                disabled={isProcessing}
+              />
+              <ActionButton
+                icon={<Download size={18} />}
+                label="Export"
+                onClick={exportPDF}
+                disabled={isProcessing}
+              />
+            </>
+          )}
         </div>
       </header>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Sidebar Toolbar */}
-        <Toolbar
-          tool={tool}
-          setTool={setTool}
-          zoom={zoom}
-          setZoom={setZoom}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
-          selectedElement={selectedElement && textElements[currentPage] ? textElements[currentPage].find(el => el.id === selectedElement) : null}
-          onUpdateElement={(updates) => selectedElement && updateTextElement(currentPage, selectedElement, updates)}
-          onDeleteElement={() => selectedElement && deleteTextElement(currentPage, selectedElement)}
-        />
+      {!pdfFile ? (
+        <EmptyState onClick={() => fileInputRef.current?.click()} />
+      ) : (
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Sidebar Toolbar */}
+          <Toolbar
+            tool={tool}
+            setTool={setTool}
+            zoom={zoom}
+            setZoom={setZoom}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={historyIndex > 0}
+            canRedo={historyIndex < history.length - 1}
+            selectedElement={selectedElement ? textElements[currentPage]?.find(el => el.id === selectedElement) : null}
+            onUpdateElement={(updates) => selectedElement && updateTextElement(currentPage, selectedElement, updates)}
+            onDeleteElement={() => selectedElement && deleteTextElement(currentPage, selectedElement)}
+          />
 
-        {/* Main Editor Area */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          background: 'rgba(0, 0, 0, 0.2)'
-        }}>
-          {/* Page Navigation */}
-          {pages.length > 1 && (
-            <PageNavigation
-              currentPage={currentPage}
-              totalPages={pages.length}
-              onPageChange={setCurrentPage}
-            />
-          )}
-
-          {/* Canvas Area */}
+          {/* Main Editor Area */}
           <div style={{
             flex: 1,
-            overflow: 'auto',
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            padding: '40px',
-            position: 'relative'
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: 'rgba(0, 0, 0, 0.2)'
           }}>
-            {isProcessing ? (
-              <LoadingSpinner />
-            ) : pages[currentPage] ? (
-              <PDFPage
-                page={pages[currentPage]}
-                textElements={textElements[currentPage] || []}
-                zoom={zoom}
-                tool={tool}
-                selectedElement={selectedElement}
-                editingElement={editingElement}
-                onSelectElement={setSelectedElement}
-                onEditElement={setEditingElement}
-                onUpdateElement={(elementId, updates) => updateTextElement(currentPage, elementId, updates)}
-                onAddText={(x, y) => addNewTextElement(currentPage, x, y)}
+            {/* Page Navigation */}
+            {pages.length > 1 && (
+              <PageNavigation
+                currentPage={currentPage}
+                totalPages={pages.length}
+                onPageChange={setCurrentPage}
               />
-            ) : null}
+            )}
+
+            {/* Canvas Area */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              padding: '40px',
+              position: 'relative'
+            }}>
+              {isProcessing ? (
+                <LoadingSpinner />
+              ) : pages[currentPage] ? (
+                <PDFPage
+                  page={pages[currentPage]}
+                  textElements={textElements[currentPage] || []}
+                  zoom={zoom}
+                  tool={tool}
+                  selectedElement={selectedElement}
+                  editingElement={editingElement}
+                  onSelectElement={setSelectedElement}
+                  onEditElement={setEditingElement}
+                  onUpdateElement={(elementId, updates) => updateTextElement(currentPage, elementId, updates)}
+                  onAddText={(x, y) => addNewTextElement(currentPage, x, y)}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -353,15 +357,22 @@ const ActionButton = ({ icon, label, onClick, disabled = false, primary = false 
       fontWeight: primary ? '600' : '400',
       transition: 'all 0.3s ease',
       opacity: disabled ? 0.5 : 1,
-      fontFamily: 'inherit'
+      fontFamily: 'inherit',
+      boxShadow: primary ? '0 4px 15px rgba(255, 215, 0, 0.3)' : 'none'
     }}
     onMouseEnter={(e) => {
       if (!disabled) {
         e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = primary 
+          ? '0 6px 20px rgba(255, 215, 0, 0.4)'
+          : '0 4px 15px rgba(255, 215, 0, 0.2)';
       }
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = primary 
+        ? '0 4px 15px rgba(255, 215, 0, 0.3)'
+        : 'none';
     }}
   >
     {icon}
@@ -369,6 +380,72 @@ const ActionButton = ({ icon, label, onClick, disabled = false, primary = false 
   </button>
 );
 
+// Empty State Component
+const EmptyState = ({ onClick }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '30px'
+  }}>
+    <div 
+      onClick={onClick}
+      style={{
+        width: '220px',
+        height: '220px',
+        borderRadius: '20px',
+        background: 'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%)',
+        border: '3px dashed rgba(255, 215, 0, 0.4)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '15px',
+        cursor: 'pointer',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.05) rotate(2deg)';
+        e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.7)';
+        e.currentTarget.style.background = 'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.25) 0%, rgba(255, 165, 0, 0.1) 100%)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+        e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+        e.currentTarget.style.background = 'radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%)';
+      }}
+    >
+      <Upload size={70} color="rgba(255, 215, 0, 0.7)" strokeWidth={1.5} />
+      <div style={{ textAlign: 'center', fontSize: '15px', color: '#FFD700', fontWeight: '500' }}>
+        Click to upload
+      </div>
+    </div>
+    
+    <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+      <h2 style={{ 
+        margin: '0 0 12px 0', 
+        fontSize: '32px', 
+        fontWeight: '400',
+        background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text'
+      }}>
+        Start editing your PDF
+      </h2>
+      <p style={{ margin: 0, color: '#999', fontSize: '15px', lineHeight: '1.6' }}>
+        Upload a PDF document to edit text in-place, just like in Word.<br/>
+        Supports drag-and-drop repositioning and live formatting.
+      </p>
+    </div>
+  </div>
+);
+
+// Sidebar Toolbar (continued in next part due to length...)
 const Toolbar = ({ tool, setTool, zoom, setZoom, onUndo, onRedo, canUndo, canRedo, selectedElement, onUpdateElement, onDeleteElement }) => (
   <div style={{
     width: '300px',
@@ -859,91 +936,79 @@ const EditableTextElement = ({ element, zoom, isSelected, isEditing, onMouseDown
     setText(element.text);
   }, [element.text]);
 
-  // Keep focus on the selected area if it was just clicked
   useEffect(() => {
-    if (isSelected && textareaRef.current && document.activeElement !== textareaRef.current) {
-      // Don't auto focus to avoid stealing focus inappropriately, but allow normal text interaction
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
     }
-  }, [isSelected]);
+  }, [isEditing]);
 
   const handleBlur = () => {
-    if (text !== element.text) {
-      onUpdate({ text });
-    }
+    onUpdate({ text });
+    onBlur();
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       setText(element.text);
-      if (textareaRef.current) textareaRef.current.blur();
+      onBlur();
     }
   };
-
-  // Subtract 2px border from position so the border doesn't shift text
-  const borderPx = 1;
 
   return (
     <div
       onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
       style={{
         position: 'absolute',
-        left: element.x * zoom - borderPx,
-        top: element.y * zoom - borderPx,
+        left: element.x * zoom,
+        top: element.y * zoom,
         fontSize: element.fontSize * zoom,
         fontFamily: element.fontFamily,
         fontWeight: element.fontWeight,
-        lineHeight: 1,
         color: element.color,
-        cursor: isSelected ? 'move' : 'text',
+        cursor: isEditing ? 'text' : isSelected ? 'move' : 'pointer',
+        userSelect: isEditing ? 'text' : 'none',
         textAlign: element.align,
-        width: Math.max(element.width * zoom, 50) + 8,
-        padding: 0,
-        border: isSelected ? `${borderPx}px dashed #4a90e2` : `${borderPx}px dashed rgba(74, 144, 226, 0.35)`,
-        borderRadius: '0',
-        background: '#ffffff',
-        zIndex: isSelected ? 10 : 2,
-        boxSizing: 'border-box',
+        minWidth: element.width * zoom,
+        padding: isSelected ? '6px' : '2px',
+        border: isSelected ? '2px solid #FFD700' : '2px solid transparent',
+        borderRadius: '4px',
+        background: isSelected ? 'rgba(255, 215, 0, 0.08)' : isEditing ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+        transition: isEditing ? 'none' : 'all 0.2s ease',
+        boxShadow: isSelected ? '0 0 0 3px rgba(255, 215, 0, 0.15)' : 'none',
+        outline: 'none',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word'
       }}
     >
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        onMouseDown={(e) => {
-          if (isSelected) {
-            e.stopPropagation();
-          }
-        }}
-        onClick={(e) => {
-          if (isSelected) {
-            e.stopPropagation();
-          }
-        }}
-        style={{
-          display: 'block',
-          width: '100%',
-          height: Math.max(element.height * zoom, element.fontSize * zoom * 1.2),
-          border: 'none',
-          background: 'transparent',
-          fontSize: 'inherit',
-          fontFamily: 'inherit',
-          fontWeight: 'inherit',
-          lineHeight: 'inherit',
-          color: 'inherit',
-          textAlign: 'inherit',
-          resize: 'none',
-          outline: 'none',
-          padding: 0,
-          margin: 0,
-          overflow: 'hidden',
-          whiteSpace: 'pre',
-          cursor: 'text',
-          boxSizing: 'border-box',
-        }}
-        rows={1}
-      />
+      {isEditing ? (
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          style={{
+            width: '100%',
+            minHeight: element.height * zoom,
+            border: 'none',
+            background: 'transparent',
+            fontSize: 'inherit',
+            fontFamily: 'inherit',
+            fontWeight: 'inherit',
+            color: 'inherit',
+            textAlign: 'inherit',
+            resize: 'none',
+            outline: 'none',
+            padding: 0,
+            margin: 0
+          }}
+          rows={Math.max(1, text.split('\n').length)}
+        />
+      ) : (
+        <div>{text}</div>
+      )}
     </div>
   );
 };
@@ -974,4 +1039,290 @@ const LoadingSpinner = () => (
   </div>
 );
 
-export default PDFEditor;
+export default PDFEditorPro;
+
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    open: true
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist']
+  }
+});
+
+
+pdfutils.js->
+import * as pdfjsLib from 'pdfjs-dist';
+import { PDFDocument, rgb } from 'pdf-lib';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+/**
+ * Load PDF and extract pages with text positions
+ */
+export const loadPDFFile = async (file) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdf = await loadingTask.promise;
+
+  const pages = [];
+  
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2.0 });
+    
+    // Render page to canvas
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+    
+    // Get page image
+    const imageData = canvas.toDataURL('image/png');
+    
+    // Extract text content with positions
+    const textContent = await page.getTextContent();
+    const textElements = extractTextElements(textContent, viewport);
+    
+    pages.push({
+      id: pageNum - 1,
+      width: viewport.width / 2,
+      height: viewport.height / 2,
+      imageData,
+      textElements,
+      originalViewport: viewport
+    });
+  }
+  
+  return { pages, originalFile: arrayBuffer };
+};
+
+/**
+ * Extract text elements with proper positioning
+ */
+const extractTextElements = (textContent, viewport) => {
+  const elements = [];
+  let elementId = 0;
+  
+  textContent.items.forEach((item) => {
+    // Transform coordinates from PDF space to screen space
+    const tx = item.transform;
+    const x = tx[4] / 2;
+    const y = (viewport.height - tx[5]) / 2;
+    const fontSize = Math.abs(tx[3]) / 2;
+    const width = item.width / 2;
+    const height = item.height / 2;
+    
+    // Skip empty strings
+    if (!item.str.trim()) return;
+    
+    elements.push({
+      id: `text-${elementId++}`,
+      text: item.str,
+      x,
+      y: y - fontSize, // Adjust y to top-left corner
+      fontSize,
+      fontFamily: getFontFamily(item.fontName),
+      fontWeight: getFontWeight(item.fontName),
+      color: '#000000',
+      width: Math.max(width, 50),
+      height: fontSize * 1.2,
+      align: 'left',
+      originalFontName: item.fontName,
+      transform: tx
+    });
+  });
+  
+  return elements;
+};
+
+/**
+ * Map PDF font names to web-safe fonts
+ */
+const getFontFamily = (fontName) => {
+  if (!fontName) return 'Georgia, serif';
+  
+  const name = fontName.toLowerCase();
+  
+  if (name.includes('times') || name.includes('serif')) {
+    return 'Georgia, "Times New Roman", serif';
+  } else if (name.includes('helvetica') || name.includes('arial')) {
+    return '"Segoe UI", Arial, sans-serif';
+  } else if (name.includes('courier') || name.includes('mono')) {
+    return '"Courier New", monospace';
+  }
+  
+  return 'Georgia, serif';
+};
+
+/**
+ * Determine font weight from font name
+ */
+const getFontWeight = (fontName) => {
+  if (!fontName) return 'normal';
+  
+  const name = fontName.toLowerCase();
+  
+  if (name.includes('bold')) {
+    return 'bold';
+  } else if (name.includes('light')) {
+    return '300';
+  }
+  
+  return 'normal';
+};
+
+/**
+ * Export modified PDF with text changes
+ */
+export const exportModifiedPDF = async (originalFileBuffer, pages, modifications) => {
+  try {
+    // Load the original PDF
+    const pdfDoc = await PDFDocument.load(originalFileBuffer);
+    const pdfPages = pdfDoc.getPages();
+    
+    // Apply modifications to each page
+    for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+      const page = pdfPages[pageIndex];
+      const { height } = page.getSize();
+      const mods = modifications[pageIndex] || [];
+      
+      // Process each text modification
+      for (const mod of mods) {
+        if (mod.deleted) {
+          // Cover deleted text with white rectangle
+          page.drawRectangle({
+            x: mod.x * 2,
+            y: height - (mod.y * 2) - (mod.fontSize * 2),
+            width: mod.width * 2,
+            height: mod.fontSize * 2 * 1.2,
+            color: rgb(1, 1, 1),
+            borderWidth: 0
+          });
+        } else if (mod.text !== mod.originalText) {
+          // Cover original text
+          page.drawRectangle({
+            x: mod.x * 2,
+            y: height - (mod.y * 2) - (mod.fontSize * 2),
+            width: mod.width * 2,
+            height: mod.fontSize * 2 * 1.2,
+            color: rgb(1, 1, 1),
+            borderWidth: 0
+          });
+          
+          // Draw new text
+          const color = hexToRgb(mod.color);
+          page.drawText(mod.text, {
+            x: mod.x * 2,
+            y: height - (mod.y * 2) - (mod.fontSize * 2),
+            size: mod.fontSize * 2,
+            color: rgb(color.r / 255, color.g / 255, color.b / 255),
+            // Note: pdf-lib has limited font support, using default fonts
+          });
+        }
+      }
+    }
+    
+    // Save the modified PDF
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+  } catch (error) {
+    console.error('Error exporting PDF:', error);
+    throw error;
+  }
+};
+
+/**
+ * Convert hex color to RGB
+ */
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 0, g: 0, b: 0 };
+};
+
+/**
+ * Create modifications data structure for export
+ */
+export const createModifications = (originalPages, modifiedTextElements) => {
+  const modifications = {};
+  
+  Object.keys(modifiedTextElements).forEach(pageIndex => {
+    const original = originalPages[pageIndex]?.textElements || [];
+    const modified = modifiedTextElements[pageIndex] || [];
+    
+    const pageMods = [];
+    
+    // Find deleted elements
+    original.forEach(origEl => {
+      const stillExists = modified.find(modEl => modEl.id === origEl.id);
+      if (!stillExists) {
+        pageMods.push({ ...origEl, deleted: true });
+      }
+    });
+    
+    // Find modified or new elements
+    modified.forEach(modEl => {
+      const origEl = original.find(o => o.id === modEl.id);
+      
+      if (!origEl) {
+        // New element
+        pageMods.push({ ...modEl, originalText: '', new: true });
+      } else if (
+        modEl.text !== origEl.text ||
+        modEl.x !== origEl.x ||
+        modEl.y !== origEl.y ||
+        modEl.fontSize !== origEl.fontSize ||
+        modEl.color !== origEl.color
+      ) {
+        // Modified element
+        pageMods.push({ ...modEl, originalText: origEl.text });
+      }
+    });
+    
+    if (pageMods.length > 0) {
+      modifications[pageIndex] = pageMods;
+    }
+  });
+  
+  return modifications;
+};
+
+package.json->
+{
+  "name": "pdf-editor-pro",
+  "version": "1.0.0",
+  "description": "Industry-level PDF editor with in-place text editing",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "pdfjs-dist": "^3.11.174",
+    "pdf-lib": "^1.17.1",
+    "lucide-react": "^0.294.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.0.0"
+  }
+}
